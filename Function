@@ -1,0 +1,175 @@
+import tkinter as tk
+from tkinter import messagebox  # Import the messagebox module
+
+# ========== FUNCTIONS ==========
+
+def add_product():
+    product_name = product_entry.get().strip()  # Get the input from the entry widget and strip whitespace
+    if product_name:  # Check if the input is not empty
+        # Create a frame for the product
+        product_frame = tk.Frame(scrollable_frame, bg="#D3D3D3", bd=2, relief="solid")
+        product_frame.pack(fill="x", padx=20, pady=5)
+
+        # Create an Entry widget inside the frame for the product name
+        product_name_entry = tk.Entry(product_frame, width=30, font=("Arial", 12))
+        product_name_entry.insert(0, product_name)  # Insert the product name into the Entry widget
+        product_name_entry.config(state="readonly")  # Set the Entry widget to readonly after inserting the text
+        product_name_entry.pack(side="left", padx=10, pady=5)
+
+        # Store the original product name in the Entry widget's custom attribute
+        product_name_entry.original_name = product_name
+
+        # Add the product name to the list
+        products.append(product_name_entry)  # Store the Entry widget itself in the list
+        print([entry.get() for entry in products])  # Print all product names for debugging
+
+        # Create placeholders for the save and undo buttons
+        save_button = tk.Button(
+            product_frame, text="Save", bg="#4CAF50", fg="white",
+            command=lambda: save_product_name(product_name_entry, save_button, undo_button)
+        )
+        undo_button = tk.Button(
+            product_frame, text="Undo", bg="#FF6347", fg="white",
+            command=lambda: undo_product_name(product_name_entry, save_button, undo_button)
+        )
+
+        # Bind a click event to the Entry widget to toggle between editable and read-only
+        product_name_entry.bind("<Button-1>", lambda event: on_entry_click(product_name_entry, save_button, undo_button))
+
+        # Bind a focus-out event to save the product name and make the entry read-only
+        product_name_entry.bind("<FocusOut>", lambda event: on_focus_out(product_name_entry, save_button, undo_button))
+
+        # Bind a click event to the product frame
+        product_frame.bind("<Button-1>", lambda event: on_product_click(product_name_entry))
+
+        # Clear the entry widget after adding the product
+        product_entry.delete(0, tk.END)
+    else:
+        messagebox.showwarning("Input Error", "Entry is empty. Please provide a product name.")  # Show a warning message
+
+
+def on_entry_click(entry_widget, save_button, undo_button):
+    # Make the entry editable and show the save/undo buttons
+    entry_widget.config(state="normal")  # Make the entry editable
+    save_button.pack(side="right", padx=5, pady=5)  # Show the save button
+    undo_button.pack(side="right", padx=5, pady=5)  # Show the undo button
+    entry_widget.focus_set()  # Set focus to the entry widget
+
+
+def on_focus_out(entry_widget, save_button, undo_button):
+    # Save the product name and make the entry read-only when it loses focus
+    new_name = entry_widget.get().strip()
+    if new_name:
+        print(f"Product name saved on focus out: {new_name}")
+    else:
+        messagebox.showwarning("Input Error", "Product name cannot be empty. Reverting to the previous name.")
+        entry_widget.delete(0, tk.END)
+        entry_widget.insert(0, "Unnamed Product")  # Revert to a default name if empty
+
+    # Make the entry read-only
+    entry_widget.config(state="readonly")
+
+    # Hide the save and undo buttons
+    save_button.pack_forget()
+    undo_button.pack_forget()
+
+
+def save_product_name(entry_widget, save_button, undo_button):
+    # Save the updated product name when the save button is clicked
+    new_name = entry_widget.get().strip()
+    if new_name:
+        print(f"Product name saved: {new_name}")
+        save_button.pack_forget()  # Hide the save button after saving
+        undo_button.pack_forget()  # Hide the undo button after saving
+        entry_widget.config(state="readonly")  # Make the entry read-only after saving
+    else:
+        messagebox.showwarning("Input Error", "Product name cannot be empty. Please provide a valid name.")
+
+
+def undo_product_name(entry_widget, save_button, undo_button):
+    # Revert the product name to the original value when the undo button is clicked
+    original_name = getattr(entry_widget, "original_name", "")  # Retrieve the original name
+    entry_widget.delete(0, tk.END)
+    entry_widget.insert(0, original_name)  # Revert to the original name
+    print(f"Product name reverted to: {original_name}")
+    save_button.pack_forget()  # Hide the save button
+    undo_button.pack_forget()  # Hide the undo button
+    entry_widget.config(state="readonly")  # Make the entry read-only after undoing
+
+
+def on_product_click(entry_widget):
+    # Handle the click event on the product frame
+    messagebox.showinfo("Product Clicked", f"Product '{entry_widget.get()}' clicked successfully!")
+
+
+def end_fullscreen(event=None):
+    root.destroy()
+
+def on_configure(event):
+    # Adjust scrollable region whenever contents change
+    canvas.configure(scrollregion=canvas.bbox("all"))
+
+def resize_frame(event):
+    # Adjust inner frame width to match canvas width (minus padding if needed)
+    canvas.itemconfig(canvas_window, width=event.width)
+
+def on_mousewheel(event):
+    # Scroll vertically without visible scrollbar
+    canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+# ========== ROOT SETUP ==========
+
+root = tk.Tk()
+root.title("Product Pricing Assistant")
+root.configure(bg="lightblue")
+root.attributes("-fullscreen", True)
+root.bind("<Escape>", end_fullscreen)
+
+# ========== MAIN FRAME SETUP ==========
+
+# Left frame (60% of the screen width)
+left_frame = tk.Frame(root, bg="#4F5D75", bd=5, relief="solid")
+left_frame.place(relx=0.0, rely=0.0, relwidth=0.6, relheight=1.0)
+
+# Right frame (40% of the screen width)
+right_frame = tk.Frame(root, bg="#2D3142", bd=5, relief="solid")
+right_frame.place(relx=0.6, rely=0.0, relwidth=0.4, relheight=1.0)
+
+# Entry widget placed to the left of the Add Product button
+product_entry = tk.Entry(left_frame, width=25)
+product_entry.place(relx=0.05, rely=0.02)  # Place the entry widget at the top-left corner of the left frame
+
+# Adjust the Add Product button placement to be next to the entry widget
+add_button = tk.Button(
+    left_frame, text="Add Product", width=15, height=2,
+    command=add_product, bg="#FF7F50", fg="white"
+)
+add_button.place(relx=0.35, rely=0.02)  # Place the button to the right of the entry widget
+
+# Main frame inside the left frame
+main_frame = tk.Frame(left_frame, bg="#4F5D75", bd=5, relief="solid")
+main_frame.place(relx=0.05, rely=0.15, relwidth=0.9, relheight=0.8)  # Adjusted rely to avoid overlap
+
+# Adjust the canvas placement to avoid overlapping with the button
+canvas = tk.Canvas(main_frame, bg="#4F5D75", highlightthickness=0)
+canvas.place(relx=0.05, rely=0.15, relwidth=0.9, relheight=0.8)  # Adjusted rely and relheight
+
+# ========== SCROLLABLE FRAME ==========
+
+scrollable_frame = tk.Frame(canvas, bg="#4F5D75")
+canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+canvas.bind("<Configure>", resize_frame)
+scrollable_frame.bind("<Configure>", on_configure)
+canvas.bind_all("<MouseWheel>", on_mousewheel)
+canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+
+# ========== CONTENT ==========
+
+# products = {}
+products = []
+
+# ========== MAINLOOP ==========
+
+root.mainloop()
